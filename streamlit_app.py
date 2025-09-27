@@ -59,7 +59,6 @@ def main() -> None:
         with st.chat_message(message.role):
             st.markdown(message.content)
     if prompt := st.chat_input("What do you want help with?"):
-        st.write(str(state))
         state.messages.append(Message(role="user", content=prompt))
         with st.chat_message("user"):
             st.markdown(prompt)
