@@ -1,5 +1,4 @@
 import dataclasses
-import sys
 from typing import Any, final
 
 import streamlit as st
@@ -51,6 +50,11 @@ def session_state() -> SessionState:
 
 def main() -> None:
     st.title("JVA Math AI 0.1.0")
+    st.write(
+        "Are you unsatisfied with your math score? JVA Math AI can help you "
+        "raise it by analyzing your strengths and weaknesses, giving tailored "
+        "practice problems, and explaining solutions step-by-step."
+    )
     state: SessionState = session_state()
     client: openai.OpenAI = openai.OpenAI(api_key=TOKEN)
     for message in state.messages:
