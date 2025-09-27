@@ -1,8 +1,9 @@
 import dataclasses
 from typing import Any, final
 
-import streamlit as st
 import openai
+import PIL.Image
+import streamlit as st
 
 
 @final
@@ -38,6 +39,9 @@ DISPLAY_IF: frozenset[str] = frozenset(["user", "assistant"])
 TOKEN: str = st.secrets.TOKEN
 
 
+LOGO: PIL.Image.Image = PIL.Image.open("./JVA Logo.png")
+
+
 def session_state() -> SessionState:
     """Gets a `SessionState` instance."""
     if "state" not in st.session_state:
@@ -49,6 +53,7 @@ def session_state() -> SessionState:
 
 
 def main() -> None:
+    st.image(LOGO)
     st.title("JVA Math AI 0.1.0")
     st.write(
         "Are you unsatisfied with your math score? JVA Math AI can help you "
