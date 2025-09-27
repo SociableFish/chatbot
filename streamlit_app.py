@@ -1,56 +1,76 @@
-import streamlit as st
-from openai import OpenAI
+import dataclasses
+import sys
+from typing import Any, final
 
-# Show title and description.
-st.title("💬 Chatbot")
-st.write(
-    "This is a simple chatbot that uses OpenAI's GPT-3.5 model to generate responses. "
-    "To use this app, you need to provide an OpenAI API key, which you can get [here](https://platform.openai.com/account/api-keys). "
-    "You can also learn how to build this app step by step by [following our tutorial](https://docs.streamlit.io/develop/tutorials/llms/build-conversational-apps)."
+import streamlit as st
+import openai
+
+
+@final
+@dataclasses.dataclass(frozen=True, slots=True, kw_only=True)
+class Message:
+    role: Any
+    content: Any
+
+    def asdict(self, /) -> Any:
+        return {"role": self.role, "content": self.content}
+
+
+@final
+@dataclasses.dataclass(slots=True, kw_only=True)
+class SessionState:
+    client: openai.OpenAI | None
+    messages: list[Message]
+
+
+SYSTEM_MESSAGE: Message = Message(
+    role="system",
+    content=(
+        "You are a friendly math AI helper that helps school students get "
+        "better at math. Expected tasks include explaining solutions to math "
+        "problems, solving math problems, and explaining tricky math concepts."
+    )
 )
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-openai_api_key = st.text_input("OpenAI API Key", type="password")
-if not openai_api_key:
-    st.info("Please add your OpenAI API key to continue.", icon="🗝️")
-else:
 
-    # Create an OpenAI client.
-    client = OpenAI(api_key=openai_api_key)
+DISPLAY_IF: frozenset[str] = frozenset(["user", "assistant"])
 
-    # Create a session state variable to store the chat messages. This ensures that the
-    # messages persist across reruns.
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
 
-    # Display the existing chat messages via `st.chat_message`.
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+TOKEN: str = st.secrets.TOKEN
 
-    # Create a chat input field to allow the user to enter a message. This will display
-    # automatically at the bottom of the page.
-    if prompt := st.chat_input("What is up?"):
 
-        # Store and display the current prompt.
-        st.session_state.messages.append({"role": "user", "content": prompt})
+def session_state() -> SessionState:
+    """Gets a `SessionState` instance."""
+    if "state" not in st.session_state:
+        st.session_state.state = SessionState(
+            client=None,
+            messages=[SYSTEM_MESSAGE]
+        )
+    return st.session_state.state
+
+
+def main() -> None:
+    st.title("JVA Math AI 0.1.0")
+    state: SessionState = session_state()
+    client: openai.OpenAI = openai.OpenAI(api_key=TOKEN)
+    for message in state.messages:
+        if message.role not in DISPLAY_IF:
+            continue
+        with st.chat_message(message.role):
+            st.markdown(message.content)
+    if prompt := st.chat_input("What do you want help with?"):
+        st.write(str(state))
+        state.messages.append(Message(role="user", content=prompt))
         with st.chat_message("user"):
             st.markdown(prompt)
-
-        # Generate a response using the OpenAI API.
-        stream = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages
-            ],
-            stream=True,
-        )
-
-        # Stream the response to the chat using `st.write_stream`, then store it in 
-        # session state.
         with st.chat_message("assistant"):
-            response = st.write_stream(stream)
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            response = st.write_stream(client.chat.completions.create(
+                model="gpt-4",
+                messages=[m.asdict() for m in state.messages],
+                stream=True,
+            ))
+        state.messages.append(Message(role="assistant", content=response))
+
+
+if __name__ == "__main__":
+    main()
