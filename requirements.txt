@@ -1,3 +1,2 @@
-openai
-pillow
-streamlit
+pillow==12.1.1
+streamlit==1.55.0
